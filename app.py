@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 #Page Config
 st.set_page_config(
@@ -22,9 +23,17 @@ st.sidebar.title("🇳🇬 Nigeria Dashboard")
 st.sidebar.markdown("Explore acute malnutrition data across Nigerian regions.")
 st.sidebar.divider()
 
-#Region filter
+# Region filter
 regions = ["All"] + sorted(df["Region"].unique().tolist())
 selected_region = st.sidebar.selectbox("🌍 Select Region", regions)
+
+# Malnutrition type filter
+malnutrition_type = st.sidebar.radio(
+    "📊 Select Malnutrition Type",
+    ["GAM", "SAM", "MAM"]
+)
+
+st.sidebar.divider()
 
 #Filter Data
 if selected_region == "All":
@@ -32,8 +41,17 @@ if selected_region == "All":
 else:
     filtered_df = df[df["Region"] == selected_region]
 
-st.sidebar.divider()
 st.sidebar.markdown(f"**Showing:** {len(filtered_df)} LGAs")
+
+#Column Mapping
+col_map = {
+    "GAM": "Estimated # of GAM cases",
+    "SAM": "Estimated # of SAM cases",
+    "MAM": "Estimated # of MAM cases"
+}
+selected_col = col_map[malnutrition_type]
+lga_col = filtered_df.columns[1]
+region_col = "Region"
 
 #Title
 st.title("🇳🇬 Nigerian Acute Malnutrition Dashboard")
@@ -44,14 +62,80 @@ st.divider()
 st.subheader("📊 Key Statistics")
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Total LGAs", len(filtered_df))
-col2.metric("Total GAM Cases", f"{filtered_df.iloc[:, 5].sum():,.0f}")
-col3.metric("Total SAM Cases", f"{filtered_df.iloc[:, 7].sum():,.0f}")
-col4.metric("Total MAM Cases", f"{filtered_df.iloc[:, 6].sum():,.0f}")
+col2.metric("Total GAM Cases", f"{filtered_df['Estimated # of GAM cases'].sum():,.0f}")
+col3.metric("Total SAM Cases", f"{filtered_df['Estimated # of SAM cases'].sum():,.0f}")
+col4.metric("Total MAM Cases", f"{filtered_df['Estimated # of MAM cases'].sum():,.0f}")
 
 st.divider()
 
-#Raw Data Table
+#Row 1: Bar chart + Pie chart
+col_left, col_right = st.columns(2)
+
+with col_left:
+    st.subheader(f"🏆 Top 10 LGAs by {malnutrition_type} Cases")
+    top10 = filtered_df.nlargest(10, selected_col)
+    fig1 = px.bar(
+        top10,
+        x=selected_col,
+        y=lga_col,
+        orientation='h',
+        color=region_col,
+        title=f"Top 10 LGAs by {malnutrition_type} Cases",
+        labels={selected_col: f"{malnutrition_type} Cases", lga_col: "LGA"}
+    )
+    fig1.update_layout(yaxis={'categoryorder': 'total ascending'})
+    st.plotly_chart(fig1, use_container_width=True)
+
+with col_right:
+    st.subheader(f"🥧 {malnutrition_type} Cases by Region")
+    region_summary = filtered_df.groupby(region_col)[selected_col].sum().reset_index()
+    fig2 = px.pie(
+        region_summary,
+        names=region_col,
+        values=selected_col,
+        title=f"{malnutrition_type} Distribution by Region",
+        hole=0.4
+    )
+    st.plotly_chart(fig2, use_container_width=True)
+
+st.divider()
+
+#Row 2: Grouped Bar chart
+st.subheader("📈 GAM vs SAM vs MAM by Region")
+region_compare = df.groupby(region_col).agg(
+    GAM=('Estimated # of GAM cases', 'sum'),
+    SAM=('Estimated # of SAM cases', 'sum'),
+    MAM=('Estimated # of MAM cases', 'sum')
+).reset_index()
+
+fig3 = px.bar(
+    region_compare,
+    x=region_col,
+    y=["GAM", "SAM", "MAM"],
+    barmode="group",
+    title="Malnutrition Types Comparison by Region",
+    labels={"value": "Number of Cases", "variable": "Type"}
+)
+st.plotly_chart(fig3, use_container_width=True)
+
+st.divider()
+
+#Row 3: Summary table by region
+st.subheader("📋 Regional Summary Table")
+summary = df.groupby(region_col).agg(
+    Total_LGAs=(lga_col, 'count'),
+    Total_GAM=('Estimated # of GAM cases', 'sum'),
+    Total_SAM=('Estimated # of SAM cases', 'sum'),
+    Total_MAM=('Estimated # of MAM cases', 'sum')
+).reset_index()
+st.dataframe(summary, use_container_width=True)
+
+st.divider()
+
+#Raw data
 st.subheader("📋 Raw Dataset")
 st.dataframe(filtered_df, use_container_width=True)
+
+
 
 
