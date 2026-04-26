@@ -10,6 +10,31 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+#Custom CSS
+st.markdown("""
+    <style>
+    .main { background-color: #f8f9fa; }
+    .stMetric {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+    }
+    .stMetric label { color: #555555; font-size: 14px; }
+    .block-container { padding-top: 2rem; }
+    h1 { color: #1a1a2e; }
+    h2, h3 { color: #16213e; }
+    .insight-box {
+        background-color: #e8f4fd;
+        border-left: 4px solid #2196F3;
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 #Load Data
 @st.cache_data
 def load_data():
@@ -98,7 +123,6 @@ with col_right:
     )
     st.plotly_chart(fig2, use_container_width=True)
 
-st.divider()
 
 #Row 2: Grouped Bar chart
 st.subheader("📈 GAM vs SAM vs MAM by Region")
